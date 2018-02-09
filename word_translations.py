@@ -82,8 +82,6 @@ if __name__ == '__main__':
     parser.add_argument('--knn', type=int, default=10,
                         help='K-NNs that should be retrieved for each source word'
                              '(Conneau et al. use 10 for evaluation)')
-    parser.add_argument('--src-words', nargs='+', default=['house', 'garden', 'street', 'run', 'jump', 'swim'],
-                        help='A list of words that should be translated')
     args = parser.parse_args()
     if not args.cuda:
         print('Not running on GPU...', file=sys.stderr)
