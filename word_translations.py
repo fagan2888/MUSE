@@ -12,7 +12,7 @@ from src.models import build_model
 from src.utils import get_nn_avg_dist
 
 
-def get_word_translations(emb1, emb2, knn):
+def get_word_translations(emb1, emb2, knn, softmax_temp=30.):
     """
     Given source and target word embeddings, and a list of source words,
     produce a list of lists of k-best translations for each source word.
@@ -45,7 +45,7 @@ def get_word_translations(emb1, emb2, knn):
 
         # get the indices of the highest scoring target words
         top_sim_scores, top_match_ids = scores.topk(knn, 1, True)  # returns a (values, indices) tuple (same as torch.topk)
-        top_sim_scores = F.softmax(top_sim_scores, 1)
+        top_sim_scores = F.softmax(softmax_temp * top_sim_scores, 1)
         top_k_match_ids += [(ids, scores) for ids, scores in zip(top_match_ids, top_sim_scores)]
 
     return top_k_match_ids
@@ -72,9 +72,13 @@ def main(args):
             for tgt_id, score in zip(tgt_ids, tgt_scores):
                 if args.cuda:
                     tgt_id, score = tgt_id.cpu(), score.cpu()
-                f.write('%s %s %.4f\n' % (id2word1[src_id],
-                                          id2word2[int(tgt_id.numpy())],
-                                          float(score.numpy())))
+                if args.output_scores:
+                    f.write('%s %s %.4f\n' % (id2word1[src_id],
+                                              id2word2[int(tgt_id.numpy())],
+                                              float(score.numpy())))
+                else:
+                    f.write('%s %s\n' % (id2word1[src_id],
+                                         id2word2[int(tgt_id.numpy())]))
 
 
 if __name__ == '__main__':
@@ -88,6 +92,12 @@ if __name__ == '__main__':
     parser.add_argument('--emb-dim', type=int, default=300, help='Embedding dimension')
     parser.add_argument('--cuda', action='store_true', help='Run on GPU')
     parser.add_argument("--normalize_embeddings", type=str, default='', help="Normalize embeddings before training")
+    parser.add_argument("--output_scores", dest='output_scores', action='store_true',
+                        help="Whether normalized scores should be included in output")
+    parser.set_defaults(output_scores=False)
+    parser.add_argument('--softmax_temp', type=float, default=1./30.,
+                        help='Softmax temperature for score normalization')
+
     parser.add_argument('--knn', type=int, default=10,
                         help='K-NNs that should be retrieved for each source word'
                              '(Conneau et al. use 10 for evaluation)')
