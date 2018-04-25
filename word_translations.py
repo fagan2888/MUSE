@@ -72,9 +72,13 @@ def main(args):
             for tgt_id, score in zip(tgt_ids, tgt_scores):
                 if args.cuda:
                     tgt_id, score = tgt_id.cpu(), score.cpu()
-                f.write('%s %s %.4f\n' % (id2word1[src_id],
-                                          id2word2[int(tgt_id.numpy())],
-                                          float(score.numpy())))
+                if args.output_scores:
+                    f.write('%s %s %.4f\n' % (id2word1[src_id],
+                                              id2word2[int(tgt_id.numpy())],
+                                              float(score.numpy())))
+                else:
+                    f.write('%s %s\n' % (id2word1[src_id],
+                                         id2word2[int(tgt_id.numpy())]))
 
 
 if __name__ == '__main__':
@@ -88,6 +92,10 @@ if __name__ == '__main__':
     parser.add_argument('--emb-dim', type=int, default=300, help='Embedding dimension')
     parser.add_argument('--cuda', action='store_true', help='Run on GPU')
     parser.add_argument("--normalize_embeddings", type=str, default='', help="Normalize embeddings before training")
+    parser.add_argument("--output_scores", dest='output_scores', action='store_true',
+                        help="Whether normalized scores should be included in output")
+    parser.set_defaults(output_scores=False)
+
     parser.add_argument('--knn', type=int, default=10,
                         help='K-NNs that should be retrieved for each source word'
                              '(Conneau et al. use 10 for evaluation)')
