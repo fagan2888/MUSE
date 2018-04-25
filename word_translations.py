@@ -4,7 +4,9 @@ Method that takes learned cross-lingual embeddings as input and produces word-to
 
 import argparse
 import torch
+import torch.nn.functional as F
 import sys
+import os
 
 from src.models import build_model
 from src.utils import get_nn_avg_dist
@@ -42,13 +44,16 @@ def get_word_translations(emb1, emb2, knn):
         scores.sub_(average_dist1[word_ids][:, None] + average_dist2[None, :])
 
         # get the indices of the highest scoring target words
-        _, top_match_ids = scores.topk(100, 1, True)  # returns a (values, indices) tuple (same as torch.topk)
-        top_k_match_ids += [id_ for id_ in top_match_ids[:, :knn]]
+        top_sim_scores, top_match_ids = scores.topk(knn, 1, True)  # returns a (values, indices) tuple (same as torch.topk)
+        top_sim_scores = F.softmax(top_sim_scores, 1)
+        top_k_match_ids += [(ids, scores) for ids, scores in zip(top_match_ids, top_sim_scores)]
 
     return top_k_match_ids
 
 
 def main(args):
+    assert os.path.exists(args.src_emb)
+    assert os.path.exists(args.tgt_emb)
     src_emb, tgt_emb, mapping, _ = build_model(args, False)
 
     # get the mapped word embeddings as vectors of shape [max_vocab_size, embedding_size]
@@ -63,9 +68,13 @@ def main(args):
     output_file = '%s-%s.txt' % (args.src_lang, args.tgt_lang)
     print('Writing to %s...' % output_file)
     with open(output_file, 'w', encoding='utf-8') as f:
-        for src_id, tgt_ids in enumerate(top_k_match_ids):
-            for tgt_id in tgt_ids:
-                f.write('%s %s\n' % (id2word1[src_id], id2word2[tgt_id]))
+        for src_id, (tgt_ids, tgt_scores) in enumerate(top_k_match_ids):
+            for tgt_id, score in zip(tgt_ids, tgt_scores):
+                if args.cuda:
+                    tgt_id, score = tgt_id.cpu(), score.cpu()
+                f.write('%s %s %.4f\n' % (id2word1[src_id],
+                                          id2word2[int(tgt_id.numpy())],
+                                          float(score.numpy())))
 
 
 if __name__ == '__main__':
