@@ -18,9 +18,10 @@ from src.evaluation import Evaluator
 
 
 # VALIDATION_METRIC = 'precision_at_1-nn'
-VALIDATION_METRIC = 'precision_at_1-csls_knn_10'
+# VALIDATION_METRIC = 'precision_at_1-csls_knn_10'
+VALIDATION_METRIC = 'mean_cosine-csls_knn_10-S2T-10000'
+# supervised criterion: 'precision_at_1-csls_knn_10'
 # unsupervised criterion: 'mean_cosine-csls_knn_10-S2T-10000'
-#   supervised criterion: 'precision_at_1-csls_knn_10'
 
 # main
 parser = argparse.ArgumentParser(description='Supervised training')
